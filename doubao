@@ -134,37 +134,81 @@
         return button;
     }
 
-    // --- 创建按钮1：公众号图片生成 ---
-    const text1 = "基于上述信息帮我生成公众号横板封面图片";
-    createFloatingButton(
-        '公众号图片生成',
-        '70px', // 第一个按钮在 70px 高度
-        '#4CAF50', // 绿色
-        function() {
-            handleSimulatedInput(text1);
-        }
-    );
+ // --- 1. 将所有按钮数据存储在一个数组中 ---
+// (已移除 'position' 属性，我们将自动生成它)
+const buttonConfigs = [
+    {
+        label: '文章内容总结',
+        prompt: '帮我详细总结下'
+    },
+    {
+        label: '公众号图片生成',
+        prompt: '基于上述信息帮我生成公众号横板封面图片'
+    },
+    {
+        label: '标题生成',
+        prompt: '基于上述内容，帮我生成个公众号标题'
+    },
+    {
+        label: '公众号内容生成',
+        prompt: '基于上述内容，帮我整理公众号内容'
+    }
+];
 
-    // --- 创建按钮2：文章内容总结 ---
-    const text2 = "帮我详细总结下";
-    createFloatingButton(
-        '文章内容总结',
-        '20px', // 第二个按钮在 20px 高度
-        '#008CBA', // 蓝色
-        function() {
-            handleSimulatedInput(text2);
-        }
-    );
+// --- 2. 随机颜色（这里我继续使用“调色板”方案，效果更好） ---
+const colorPalette = [
+    '#4CAF50', // 绿色
+    '#008CBA', // 蓝色
+    '#f44336', // 红色
+    '#FF9800', // 橙色
+    '#9C27B0', // 紫色
+    '#E91E63', // 粉色
+    '#009688'  // 蓝绿色
+];
 
-    // --- 创建按钮3：标题生成 ---
-    const text3 = "基于上述内容，帮我生成个公众号标题";
+function getRandomColorFromPalette() {
+    const index = Math.floor(Math.random() * colorPalette.length);
+    return colorPalette[index];
+}
+
+// (如果你坚持要完全随机的颜色，请使用这个函数)
+/*
+function getRandomHexColor() {
+    // 生成一个随机的6位十六进制颜色代码
+    return '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
+}
+*/
+
+
+// --- 3. 自动计算位置并创建按钮 ---
+
+// 定义起始位置和增量
+const START_POSITION_Y = 50; // 第一个按钮的顶部位置 (px)
+const POSITION_INCREMENT = 50; // 每个按钮之间的垂直间距 (px)
+
+// 使用 .forEach 循环，它能同时提供 (item, index)
+buttonConfigs.forEach((config, index) => {
+    
+    // 自动计算当前按钮的位置：
+    // 索引 0: 50 + (0 * 50) = 50px
+    // 索引 1: 50 + (1 * 50) = 100px
+    // 索引 2: 50 + (2 * 50) = 150px
+    // ...以此类推
+    const currentPosition = (START_POSITION_Y + (index * POSITION_INCREMENT)) + 'px';
+    
+    // const randomColor = getRandomHexColor(); // 使用完全随机颜色
+    const randomColor = getRandomColorFromPalette(); // 使用调色板颜色
+
     createFloatingButton(
-        '标题生成',
-        '130px',
-        '#fa2ff0', // 蓝色
+        config.label,
+        currentPosition, // <-- 使用自动计算出的位置
+        randomColor,
         function() {
-            handleSimulatedInput(text3);
+            handleSimulatedInput(config.prompt);
         }
     );
+});
+
+// (请确保 createFloatingButton 和 handleSimulatedInput 函数在别处已定义)
 
 })();
