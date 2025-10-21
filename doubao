@@ -1,0 +1,170 @@
+// ==UserScript==
+// @name         公众号图片生成文本替换（豆包专用-防清空版-双按钮）
+// @namespace    http://tampermonkey.net/
+// @version      0.6
+// @description  模拟真实输入，通过调用原生setter和派发事件，避免豆包输入框内容被清空
+// @author       你
+// @match        *://*.doubao.com/*
+// @grant        none
+// ==/UserScript==
+
+(function() {
+    'use strict';
+
+    // ----------------------------------------------------------------
+    // 核心功能函数（防清空输入）
+    // ----------------------------------------------------------------
+
+    /**
+     * 触发事件的工具函数（兼容框架事件系统）
+     * @param {Element} element - 目标元素
+     * @param {string} type - 事件类型 (例如 'input', 'change')
+     */
+    function triggerEvent(element, type) {
+        const event = new Event(type, {
+            bubbles: true,
+            cancelable: true,
+            composed: true // 穿透影子DOM
+        });
+        element.dispatchEvent(event);
+    }
+
+    /**
+     * 模拟真实输入的函数（防框架清空版）
+     * @param {HTMLTextAreaElement | HTMLInputElement} element - 目标输入框元素
+     * @param {string} text - 要输入的文本
+     */
+    function simulateInput(element, text) {
+        // 1. 获取该元素的原型，以便找到原生的 value setter
+        const elementPrototype = Object.getPrototypeOf(element);
+
+        // 2. 查找原生的 'value' 属性描述符，并获取其 'set' 方法
+        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+            elementPrototype,
+            'value'
+        ).set;
+
+        element.focus();
+
+        // 3. 模拟清空
+        nativeInputValueSetter.call(element, '');
+        triggerEvent(element, 'input');
+
+        // 4. 逐个字符输入（模拟用户打字）
+        let index = 0;
+        const interval = setInterval(() => {
+            if (index < text.length) {
+                // 构造下一个状态的完整字符串
+                const nextValue = element.value + text[index];
+
+                // 5. 使用原生的 setter 来设置新值
+                nativeInputValueSetter.call(element, nextValue);
+
+                // 6. 派发 'input' 事件，通知框架状态已改变
+                triggerEvent(element, 'input');
+
+                index++;
+            } else {
+                // 7. 输入完成，清除定时器并触发 'change' 事件
+                clearInterval(interval);
+                element.blur();
+                triggerEvent(element, 'change');
+            }
+        }, 50); // 每个字符间隔50ms
+    }
+
+    /**
+     * 模拟输入的主函数（会查找输入框并执行）
+     * @param {string} textToInput - 要插入的文本
+     */
+    function handleSimulatedInput(textToInput) {
+        const targetElement = document.querySelector('[data-testid="chat_input_input"]');
+
+        if (targetElement) {
+            // 根据元素类型处理
+            if (targetElement.tagName === 'INPUT' || targetElement.tagName === 'TEXTAREA') {
+                simulateInput(targetElement, textToInput);
+            } else if (targetElement.isContentEditable) {
+                // 处理可编辑div（富文本）的逻辑
+                targetElement.focus();
+                targetElement.innerText = '';
+                triggerEvent(targetElement, 'input');
+                targetElement.innerText = textToInput;
+                triggerEvent(targetElement, 'input');
+                targetElement.blur();
+                triggerEvent(targetElement, 'change');
+            } else {
+                alert('目标元素不是输入框或可编辑区域');
+            }
+        } else {
+            alert('未找到输入框，请确保在豆包聊天页面使用');
+        }
+    }
+
+
+    // ----------------------------------------------------------------
+    // 按钮创建与事件绑定
+    // ----------------------------------------------------------------
+
+    /**
+     * 创建一个悬浮按钮
+     * @param {string} text - 按钮文本
+     * @param {string} bottom - 按钮的 'bottom' CSS 值
+     * @param {string} backgroundColor - 按钮的背景色
+     * @param {Function} onClickHandler - 按钮的点击事件回调
+     */
+    function createFloatingButton(text, bottom, backgroundColor, onClickHandler) {
+        const button = document.createElement('button');
+        button.textContent = text;
+        button.style.position = 'fixed';
+        button.style.bottom = bottom; // 使用传入的 bottom 值
+        button.style.right = '20px';
+        button.style.zIndex = '9999';
+        button.style.padding = '10px 15px';
+        button.style.backgroundColor = backgroundColor; // 使用传入的背景色
+        button.style.color = 'white';
+        button.style.border = 'none';
+        button.style.borderRadius = '5px';
+        button.style.cursor = 'pointer';
+        button.style.boxShadow = '0 2px 5px rgba(0,0,0,0.3)';
+
+        button.addEventListener('click', onClickHandler);
+
+        document.body.appendChild(button);
+        return button;
+    }
+
+    // --- 创建按钮1：公众号图片生成 ---
+    const text1 = "基于上述信息帮我生成公众号横板封面图片";
+    createFloatingButton(
+        '公众号图片生成',
+        '70px', // 第一个按钮在 70px 高度
+        '#4CAF50', // 绿色
+        function() {
+            handleSimulatedInput(text1);
+        }
+    );
+
+    // --- 创建按钮2：文章内容总结 ---
+    const text2 = "帮我详细总结下";
+    createFloatingButton(
+        '文章内容总结',
+        '20px', // 第二个按钮在 20px 高度
+        '#008CBA', // 蓝色
+        function() {
+            handleSimulatedInput(text2);
+        }
+    );
+
+    // --- 创建按钮3：标题生成 ---
+    const text3 = "基于上述内容，帮我生成个公众号标题";
+    createFloatingButton(
+        '标题生成',
+        '130px',
+        '#fa2ff0', // 蓝色
+        function() {
+            handleSimulatedInput(text3);
+        }
+    );
+
+})();
